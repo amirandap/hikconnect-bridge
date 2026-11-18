@@ -122,3 +122,25 @@ def test_cloud_source_never_exposes_the_password(monkeypatch):
         assert "clave-super-secreta" not in text
         assert "alguien@example.com" not in text
     assert "camera=1" in repr(source)
+
+
+def test_extra_allowed_host_is_accepted_and_others_still_rejected(replay):
+    from hikconnect_bridge.http_api import BridgeServer
+    from hikconnect_bridge.service import LiveService
+
+    server = BridgeServer(("127.0.0.1", 0), LiveService(replay()), extra_hosts=("hikconnect-bridge", "otro:9000"))
+    port = server.server_address[1]
+    try:
+        assert f"hikconnect-bridge:{port}" in server.allowed_hosts
+        assert "otro:9000" in server.allowed_hosts
+        assert "evil.example.com:80" not in server.allowed_hosts
+    finally:
+        server.server_close()
+
+
+def test_serve_token_defaults_to_the_environment_variable(monkeypatch):
+    from hikconnect_bridge.cli import build_parser
+
+    monkeypatch.setenv("BRIDGE_TOKEN", "from-env")
+    assert build_parser().parse_args(["serve", "1"]).token == "from-env"
+    assert build_parser().parse_args(["serve", "1", "--token", "cli"]).token == "cli"

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import signal
 import sys
 from pathlib import Path
@@ -34,7 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument("--port", type=int, default=DEFAULT_PORT)
     serve.add_argument("--idle-seconds", type=float, default=DEFAULT_IDLE_S)
     serve.add_argument("--max-clients", type=int, default=DEFAULT_MAX_CLIENTS)
-    serve.add_argument("--token", help="token requerido (Bearer o ?token=); obligatorio fuera de loopback")
+    serve.add_argument("--token", default=os.environ.get("BRIDGE_TOKEN"),
+                       help="token (Bearer o ?token=); por defecto $BRIDGE_TOKEN; obligatorio fuera de loopback",
+                       )
+    serve.add_argument("--allowed-host", action="append", default=[], metavar="HOST[:PORT]",
+                       help="host extra aceptado en la cabecera Host (repetible), p. ej. el de otro contenedor",
+                       )
     serve.add_argument("--ffmpeg", default="ffmpeg")
     capture = sub.add_parser("capture", help="captura N segundos: guarda el Annex B y el primer fotograma")
     _add_camera_args(capture)
@@ -59,7 +65,8 @@ def cmd_serve(args: argparse.Namespace) -> int:
         return EXIT_USAGE
     service = LiveService(source, ffmpeg=args.ffmpeg, idle_seconds=args.idle_seconds,
                           max_clients=args.max_clients)
-    server = BridgeServer((args.host, args.port), service, token=args.token)
+    server = BridgeServer((args.host, args.port), service, token=args.token,
+                          extra_hosts=tuple(args.allowed_host))
     signal.signal(signal.SIGTERM, _raise_interrupt)
     base = f"http://{args.host}:{server.server_address[1]}"
     print(f"Cámara #{args.camera} stream={args.stream}\n  ffplay {base}/stream.ts\n  {base}/frame.jpg\n"

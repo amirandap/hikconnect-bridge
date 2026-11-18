@@ -49,6 +49,23 @@ curl -s http://127.0.0.1:8558/health
 
 `--stream 1` = principal, `--stream 2` = substream. El número de cámara es el del listado de la cuenta.
 
+## Docker
+
+El `Dockerfile` instala el SDK desde el commit fijado en `HIKCLOUDSTREAM_REF` y trae FFmpeg; no hace falta
+Python 3.12 en el equipo. Un proceso atiende **una** cámara (el soporte multi-cámara está pendiente).
+
+```bash
+docker build -t hikconnect-bridge https://github.com/amirandap/hikconnect-bridge.git
+# bridge.env (permisos 600): HIK_CONNECT_USER=..., HIK_CONNECT_PASSWORD=..., BRIDGE_TOKEN=<token largo aleatorio>
+docker run -d --name hikconnect-bridge --restart unless-stopped --env-file bridge.env \
+  -p 127.0.0.1:8558:8558 hikconnect-bridge serve 90 --stream 2 --host 0.0.0.0
+curl -s -H "Authorization: Bearer $BRIDGE_TOKEN" http://127.0.0.1:8558/health
+```
+
+Dentro del contenedor el servicio escucha fuera de loopback, por eso el token es obligatorio; publica el
+puerto solo en `127.0.0.1`. Para que otro contenedor lo consuma usa `--allowed-host nombre-del-contenedor`.
+Las pruebas se ejecutan con `docker build --target test -t hikconnect-bridge:test .` y `docker run --rm hikconnect-bridge:test -q`.
+
 ## Dependencia pendiente de fusionar
 
 La lectura de **todas** las páginas del pagelist VTM y el soporte HEVC/RTP están en un PR a

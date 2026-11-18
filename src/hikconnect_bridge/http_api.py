@@ -17,6 +17,11 @@ LOOPBACK_HOSTS = ("127.0.0.1", "localhost", "[::1]")
 HTTP_FORBIDDEN, HTTP_UNAVAILABLE, HTTP_GATEWAY_TIMEOUT, HTTP_NOT_FOUND = 403, 503, 504, 404
 
 
+def _has_port(host: str) -> bool:
+    """True si `host` ya trae puerto (`nombre:9000` o `[::1]:9000`); `[::1]` sin puerto no cuenta."""
+    return ":" in host.rsplit("]", 1)[-1]
+
+
 class BridgeServer(ThreadingHTTPServer):
     daemon_threads = True
 
@@ -27,7 +32,8 @@ class BridgeServer(ThreadingHTTPServer):
         self.token = token
         port = self.server_address[1]
         hosts = {*LOOPBACK_HOSTS, address[0], *extra_hosts}
-        self.allowed_hosts = {f"{h}:{port}".lower() for h in hosts}
+        # un host con puerto explícito se respeta tal cual; los demás se aceptan con el puerto del servidor
+        self.allowed_hosts = {h.lower() if _has_port(h) else f"{h}:{port}".lower() for h in hosts}
 
 
 class _Handler(BaseHTTPRequestHandler):
