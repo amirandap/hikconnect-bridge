@@ -1,0 +1,41 @@
+[project]
+name = "hikconnect-bridge"
+version = "0.1.0"
+description = "Local live-video bridge for Hik-Connect cloud NVRs (HEVC/H.264 over RTP -> MPEG-TS over HTTP)"
+requires-python = ">=3.12"
+dependencies = [
+    # La lectura completa del pagelist y el soporte HEVC/RTP viven en el PR a hikcloudstream.
+    # Mientras no se fusione, se instala desde la rama local (ver README).
+    "hikcloudstream>=0.1.4",
+    "pyezvizapi>=1.0.4.9,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-timeout>=2.3", "ruff>=0.6"]
+
+[project.scripts]
+hikconnect-bridge = "hikconnect_bridge.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+timeout = 90
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "S", "PL"]
+ignore = ["S101", "PLR2004", "S603", "S607"]
+
+[tool.ruff.lint.per-file-ignores]
+# En pruebas: líneas largas, imports locales, tokens/hosts de ejemplo y URLs locales son intencionales.
+"tests/*" = ["E501", "PLC0415", "S105", "S104", "S310", "S311"]
